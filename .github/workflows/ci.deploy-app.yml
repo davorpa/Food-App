@@ -74,3 +74,12 @@ jobs:
         path: ${{ env.artifact-path }}
         if-no-files-found: error
         retention-days: 5
+    - name: Save npm logs
+      if: ${{ always() }}  # run even there are errors in other steps
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.artifact-name }}-build-logs
+        path: |
+          ~/.npm/_logs/**.log
+        if-no-files-found: warn
+        retention-days: 5
