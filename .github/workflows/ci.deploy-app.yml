@@ -17,7 +17,7 @@ on:
 jobs:
 
   avoid_reduncy:
-    name: Cancel Previous Redundant Builds
+    name: Cancel Previous Runs
     runs-on: ubuntu-latest
     steps:
       - name: Cancel Workflow
@@ -35,6 +35,7 @@ jobs:
       artifact-path: build
 
     strategy:
+      fail-fast: false # do not cancel other matrix runs if one fails
       matrix:
         node-version:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
