@@ -1,0 +1,85 @@
+# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Deploy App Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize]
+    paths-ignore:
+      - 'README.md'
+
+#defaults:
+#  run:
+#    shell: bash
+#    working-directory:
+
+jobs:
+
+  avoid_reduncy:
+    name: Cancel Previous Runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel Workflow
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
+  build:
+    name: Build with Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+
+    env:
+      artifact-name: ${{github.event.repository.name}}-node${{ matrix.node-version }}
+      # at least where create-react-app generates the distribution
+      artifact-path: build
+
+    strategy:
+      fail-fast: false # do not cancel other matrix runs if one fails
+      matrix:
+        node-version:
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        - 12.x
+        - 14.x
+        - 16.x
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        # Whether to configure the token or SSH key with the local git config
+        # Default: true
+        persist-credentials: true
+        # Number of commits to fetch. 0 indicates all history for all branches and tags.
+        # Default: 1
+        fetch-depth: 0
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - name: Install CI dependencies
+      run: npm ci
+    - name: Build app
+      run: npm run build --if-present
+    - name: Save app artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.artifact-name }}
+        path: ${{ env.artifact-path }}
+        if-no-files-found: error
+        retention-days: 5
+    - name: Save npm logs
+      if: ${{ always() }}  # run even there are errors in other steps
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{ env.artifact-name }}-build-logs
+        path: |
+          ~/.npm/_logs/**.log
+        if-no-files-found: warn
+        retention-days: 5
